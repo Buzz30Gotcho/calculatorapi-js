@@ -1,3 +1,4 @@
+/* global describe, it, expect, beforeAll, beforeEach, afterAll */
 const http = require("http");
 const { requestHandler } = require("../src/server");
 const { request } = require("./helpers/http");
