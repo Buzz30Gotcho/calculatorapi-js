@@ -1,4 +1,3 @@
-/* global describe, it, expect, beforeAll, beforeEach, afterAll */
 const Calculator = require('../src/calculator');
 
 describe('Calculator', () => {
