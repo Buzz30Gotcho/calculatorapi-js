@@ -1,4 +1,5 @@
 const js = require("@eslint/js");
+const globals = require("globals"); // 1. On importe le package de globales d'ESLint
 module.exports = [
     js.configs.recommended,
     {
