@@ -1,0 +1,18 @@
+{
+  "name": "calculatorapi-auth-service",
+  "version": "1.0.0",
+  "description": "Microservice d'authentification (proxy Supabase) pour l'API Calculatrice.",
+  "main": "src/server.js",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^30.4.2"
+  }
+}

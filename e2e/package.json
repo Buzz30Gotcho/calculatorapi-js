@@ -1,0 +1,16 @@
+{
+  "name": "calculatorapi-e2e",
+  "version": "1.0.0",
+  "description": "Tests end-to-end (Playwright) de l'API Calculatrice — pilotent l'UX via un vrai navigateur.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install:browsers": "playwright install --with-deps chromium",
+    "test:ux": "npx playwright test --ui"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
+  }
+}

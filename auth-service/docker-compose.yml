@@ -1,0 +1,13 @@
+# Lance UNIQUEMENT le service d'authentification : docker compose up
+# Nécessite un fichier .env à la racine avec SUPABASE_URL et SUPABASE_ANON_KEY.
+services:
+  auth-service:
+    build: .
+    image: calculatorapi-auth
+    container_name: calculatorapi-auth
+    ports:
+      - "4000:4000"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    restart: unless-stopped

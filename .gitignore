@@ -1,0 +1,27 @@
+node_modules/
+coverage/
+
+# Secrets / config locale
+.env
+
+# Base SQLite locale (historique)
+back/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Java (Maven)
+target/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Playwright (généré depuis e2e/)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

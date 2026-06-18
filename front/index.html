@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculatrice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Écran de connexion : affiché tant que l'utilisateur n'est pas connecté -->
+  <section class="auth" id="authScreen">
+    <h1>Connexion</h1>
+    <form id="authForm" class="auth-form">
+      <input type="email" id="email" placeholder="Email" autocomplete="email" required />
+      <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required />
+      <div class="auth-actions">
+        <button type="submit" class="auth-btn auth-btn--primary" data-mode="login">Se connecter</button>
+        <button type="submit" class="auth-btn" data-mode="signup">Créer un compte</button>
+      </div>
+      <p class="auth-msg" id="authMsg"></p>
+    </form>
+  </section>
+
+  <!-- Calculatrice : affichée une fois connecté -->
+  <main class="calculator" id="appScreen" hidden>
+    <div class="topbar">
+      <span class="topbar-user" id="userEmail"></span>
+      <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+    </div>
+
+    <h1>Calculatrice</h1>
+
+    <div class="screen">
+      <div class="screen-expression" id="expression"></div>
+      <div class="screen-result" id="display">0</div>
+    </div>
+
+    <p class="api-status" id="apiStatus">API : <span id="apiStatusValue">non vérifiée</span></p>
+
+    <div class="keys">
+      <button class="key key--action" data-action="clear">C</button>
+      <button class="key key--action" data-action="delete">⌫</button>
+      <button class="key key--op" data-op="divide">÷</button>
+      <button class="key key--op" data-op="multiply">×</button>
+
+      <button class="key" data-digit="7">7</button>
+      <button class="key" data-digit="8">8</button>
+      <button class="key" data-digit="9">9</button>
+      <button class="key key--op" data-op="subtract">−</button>
+
+      <button class="key" data-digit="4">4</button>
+      <button class="key" data-digit="5">5</button>
+      <button class="key" data-digit="6">6</button>
+      <button class="key key--op" data-op="add">+</button>
+
+      <button class="key" data-digit="1">1</button>
+      <button class="key" data-digit="2">2</button>
+      <button class="key" data-digit="3">3</button>
+      <button class="key key--equals" data-action="equals" rowspan>=</button>
+
+      <button class="key key--zero" data-digit="0">0</button>
+      <button class="key" data-digit=".">.</button>
+      <button class="key" data-action="sign">±</button>
+    </div>
+
+    <p class="error" id="error"></p>
+
+    <section class="history">
+      <div class="history-head">
+        <span>Historique</span>
+        <button class="history-refresh" id="historyRefresh" title="Rafraîchir">↻</button>
+      </div>
+      <ul class="history-list" id="historyList"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
