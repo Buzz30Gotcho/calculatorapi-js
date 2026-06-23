@@ -1,5 +1,8 @@
-const API_BASE = "http://localhost:3000";   // node-api (calculs + historique)
-const AUTH_BASE = "http://localhost:4000";  // auth-service (Supabase)
+// Le front ne parle qu'à la passerelle (API gateway) : elle route /calculate
+// (avec failover node->java->python), /history et /auth/* vers les bons back.
+const GATEWAY = "http://localhost:8088";
+const API_BASE = GATEWAY;   // /calculate + /history
+const AUTH_BASE = GATEWAY;  // /auth/login + /auth/signup
 
 const OP_SYMBOLS = {
   add: "+",
@@ -12,6 +15,31 @@ const displayEl = document.getElementById("display");
 const expressionEl = document.getElementById("expression");
 const errorEl = document.getElementById("error");
 const apiStatusEl = document.getElementById("apiStatusValue");
+
+// --- Éléments d'authentification / historique ---
+const authScreen = document.getElementById("authScreen");
+const appScreen = document.getElementById("appScreen");
+const authForm = document.getElementById("authForm");
+const authMsg = document.getElementById("authMsg");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const userEmailEl = document.getElementById("userEmail");
+const logoutBtn = document.getElementById("logoutBtn");
+const historyListEl = document.getElementById("historyList");
+const historyRefreshBtn = document.getElementById("historyRefresh");
+
+const TOKEN_KEY = "calc_token";
+const EMAIL_KEY = "calc_email";
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+// En-tête Authorization si l'utilisateur est connecté, sinon {} (calcul anonyme).
+function authHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 // État de la calculatrice
 const state = {
@@ -114,7 +142,8 @@ async function evaluate() {
   const url = `${API_BASE}/calculate?operation=${operation}&a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
 
   try {
-    const res = await fetch(url);
+    // On envoie le token s'il existe : le backend enregistre alors le calcul.
+    const res = await fetch(url, { headers: authHeaders() });
     const data = await res.json();
 
     if (!res.ok) {
@@ -132,6 +161,8 @@ async function evaluate() {
     apiStatusEl.textContent = "connectée";
     render();
     expressionEl.textContent = `${a} ${OP_SYMBOLS[operation]} ${b} =`;
+    // Si connecté, on demande au history-service d'enregistrer ce calcul.
+    saveCalculation(operation, Number(a), Number(b), data.result);
   } catch (err) {
     apiStatusEl.textContent = "hors ligne";
     showError("Impossible de joindre l'API (le serveur tourne-t-il sur le port 3000 ?).");
@@ -192,5 +223,142 @@ async function checkApi() {
   }
 }
 
+// ====== Authentification ======
+
+function showAuthMsg(message, isError = true) {
+  authMsg.textContent = message;
+  authMsg.style.color = isError ? "" : "green";
+}
+
+function showAuthScreen() {
+  appScreen.hidden = true;
+  authScreen.hidden = false;
+}
+
+function showAppScreen(email) {
+  authScreen.hidden = true;
+  appScreen.hidden = false;
+  if (email) userEmailEl.textContent = email;
+  checkApi();
+  loadHistory();
+}
+
+// mode = "login" | "signup"
+async function handleAuth(mode) {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  if (!email || !password) {
+    return showAuthMsg("Email et mot de passe requis.");
+  }
+
+  const path = mode === "signup" ? "/auth/signup" : "/auth/login";
+  showAuthMsg("Veuillez patienter…", false);
+
+  try {
+    const res = await fetch(`${AUTH_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      return showAuthMsg(data.error || "Échec de l'authentification.");
+    }
+
+    const token = data.access_token;
+    if (!token) {
+      // signup sans connexion automatique (ex : confirmation d'email requise)
+      return showAuthMsg(
+        "Compte créé. Confirmez votre email puis connectez-vous.",
+        false
+      );
+    }
+
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(EMAIL_KEY, email);
+    showAuthMsg("");
+    showAppScreen(email);
+  } catch {
+    showAuthMsg("Impossible de joindre l'auth-service (port 4000 ?).");
+  }
+}
+
+authForm.addEventListener("submit", (e) => {
+  e.preventDefault(); // empêche le rechargement de page (l'URL "?" disparaît)
+  const mode =
+    e.submitter && e.submitter.dataset.mode === "signup" ? "signup" : "login";
+  handleAuth(mode);
+});
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EMAIL_KEY);
+  passwordInput.value = "";
+  historyListEl.innerHTML = "";
+  showAuthMsg("");
+  showAuthScreen();
+}
+
+logoutBtn.addEventListener("click", logout);
+
+// ====== Historique ======
+
+// Enregistre un calcul via le history-service (uniquement si connecté).
+async function saveCalculation(operation, a, b, result) {
+  if (!getToken()) return;
+  try {
+    const res = await fetch(`${API_BASE}/history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ operation, a, b, result }),
+    });
+    if (res.status === 401) return logout();
+    if (res.ok) loadHistory();
+  } catch {
+    // L'historique n'est pas critique : on ignore une erreur réseau.
+  }
+}
+
+async function loadHistory() {
+  if (!getToken()) return;
+  try {
+    const res = await fetch(`${API_BASE}/history`, { headers: authHeaders() });
+    if (res.status === 401) {
+      return logout(); // token expiré ou invalide
+    }
+    if (!res.ok) return;
+    const data = await res.json();
+    renderHistory(data.history || []);
+  } catch {
+    // L'historique n'est pas critique : on ignore une erreur réseau.
+  }
+}
+
+function renderHistory(items) {
+  historyListEl.innerHTML = "";
+  if (items.length === 0) {
+    const li = document.createElement("li");
+    li.className = "history-empty";
+    li.textContent = "Aucun calcul pour le moment.";
+    historyListEl.appendChild(li);
+    return;
+  }
+  for (const item of items) {
+    const li = document.createElement("li");
+    const symbol = OP_SYMBOLS[item.operation] || item.operation;
+    li.textContent = `${item.a} ${symbol} ${item.b} = ${item.result}`;
+    historyListEl.appendChild(li);
+  }
+}
+
+historyRefreshBtn.addEventListener("click", loadHistory);
+
+// ====== Initialisation ======
 clearAll();
-checkApi();
+if (getToken()) {
+  // Session déjà ouverte : on va directement à la calculatrice.
+  showAppScreen(localStorage.getItem(EMAIL_KEY) || "");
+} else {
+  showAuthScreen();
+}

@@ -5,23 +5,18 @@
 #    docker compose up -d            -> tout
 #    docker compose up -d node-api   -> un seul service
 # ============================================================
+
 services:
-  # --- API Node.js (référence, utilisée par le front) ---
-  #     Persiste l'historique en SQLite + vérifie les JWT Supabase.
+
+  # --- API Node.js : service de CALCUL pur (comme java/python) ---
   node-api:
     build: ./back
     image: calculatorapi-node
     container_name: calculatorapi-node
     ports:
       - "3000:3000"
-    environment:
-      DB_PATH: /app/data/history.db
-      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
-    volumes:
-      - calc-history:/app/data
     restart: unless-stopped
 
-  # --- Microservice d'authentification (proxy Supabase) ---
   auth-service:
     build: ./auth-service
     image: calculatorapi-auth
@@ -51,7 +46,45 @@ services:
       - "3002:3002"
     restart: unless-stopped
 
-  # --- Tests Node dans un conteneur (profil "test") ---
+  gateway:
+    build: ./gateway
+    image: calculatorapi-gateway
+    container_name: calculatorapi-gateway
+    ports:
+      - "8088:8088"
+    environment:
+      CALC_BACKEND: ${CALC_BACKEND:-http://python-api:3002}
+    restart: unless-stopped
+
+  # --- Base de données PostgreSQL (vrai service réseau) ---
+  db:
+    image: postgres:16-alpine
+    container_name: calculatorapi-db
+    environment:
+      POSTGRES_USER: calc
+      POSTGRES_PASSWORD: calc
+      POSTGRES_DB: calc_history
+    volumes:
+      - calc-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # --- Microservice d'historique (Express + PostgreSQL) ---
+  history-service:
+    build: ./history-service
+    image: calculatorapi-history
+    container_name: calculatorapi-history
+    ports:
+      - "4500:4500"
+    environment:
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      PGHOST: db
+      PGUSER: calc
+      PGPASSWORD: calc
+      PGDATABASE: calc_history
+    depends_on:
+      - db
+    restart: unless-stopped
+
   test:
     build:
       context: ./back
@@ -61,7 +94,6 @@ services:
     volumes:
       - ./back/coverage:/app/coverage
 
-  # --- Interface web (front statique) — parle à node-api (:3000) et auth-service (:4000) ---
   ux:
     build:
       context: ./front
@@ -69,11 +101,11 @@ services:
     container_name: calculatorapi-ux
     ports:
       - "8081:80"
+    # Le front ne parle qu'à la passerelle : c'est sa seule vraie dépendance.
     depends_on:
-      - node-api
-      - auth-service
+      - gateway
     restart: unless-stopped
 
-# Volume persistant pour la base SQLite de l'historique
+# Volume persistant pour les données PostgreSQL
 volumes:
-  calc-history:
+  calc-pgdata:

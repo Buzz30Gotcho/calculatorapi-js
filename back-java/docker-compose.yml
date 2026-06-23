@@ -1,9 +1,0 @@
-# Lance UNIQUEMENT le service Java : docker compose up
-services:
-  java-api:
-    build: .
-    image: calculatorapi-java
-    container_name: calculatorapi-java
-    ports:
-      - "3001:3001"
-    restart: unless-stopped

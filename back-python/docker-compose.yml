@@ -1,9 +1,0 @@
-# Lance UNIQUEMENT le service Python : docker compose up
-services:
-  python-api:
-    build: .
-    image: calculatorapi-python
-    container_name: calculatorapi-python
-    ports:
-      - "3002:3002"
-    restart: unless-stopped

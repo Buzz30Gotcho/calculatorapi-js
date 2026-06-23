@@ -10,8 +10,8 @@ class AuthError extends Error {
 }
 
 /**
- * Vérifie l'en-tête Authorization "Bearer <token>" d'une requête.
- * Le token est un JWT émis par Supabase, vérifié avec le secret du projet.
+ * Vérifie l'en-tête Authorization "Bearer <token>".
+ * Le token est un JWT émis par Supabase, vérifié avec le secret du projet (HS256).
  * Renvoie { userId, email } si valide, sinon lève une AuthError.
  */
 function verifyAuth(authHeader) {

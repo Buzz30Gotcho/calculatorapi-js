@@ -1,0 +1,16 @@
+{
+  "name": "calculatorapi-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway de la stack calculatrice (Express + http-proxy-middleware)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^2.0.6",
+    "morgan": "^1.10.0"
+  }
+}
