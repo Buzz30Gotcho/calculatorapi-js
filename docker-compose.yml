@@ -39,7 +39,7 @@ services:
     image: calculatorapi-java
     container_name: calculatorapi-java
     ports:
-      - "3001:3001"
+      - "3003:3001"
     restart: unless-stopped
 
   # --- API Python (pytest) ---
