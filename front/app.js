@@ -8,157 +8,18 @@ const OP_SYMBOLS = {
   divide: "÷",
 };
 
-// --- Éléments calculatrice ---
 const displayEl = document.getElementById("display");
 const expressionEl = document.getElementById("expression");
 const errorEl = document.getElementById("error");
 const apiStatusEl = document.getElementById("apiStatusValue");
 
-// --- Éléments auth ---
-const authScreen = document.getElementById("authScreen");
-const appScreen = document.getElementById("appScreen");
-const authForm = document.getElementById("authForm");
-const authMsg = document.getElementById("authMsg");
-const emailEl = document.getElementById("email");
-const passwordEl = document.getElementById("password");
-const userEmailEl = document.getElementById("userEmail");
-const logoutBtn = document.getElementById("logoutBtn");
-const historyList = document.getElementById("historyList");
-const historyRefresh = document.getElementById("historyRefresh");
-
-// Session : token JWT stocké dans le navigateur
-const session = {
-  token: localStorage.getItem("token") || null,
-  email: localStorage.getItem("email") || null,
-};
-
 // État de la calculatrice
 const state = {
-  current: "0",
-  previous: null,
-  operation: null,
+  current: "0",   // nombre en cours de saisie
+  previous: null, // premier opérande (string)
+  operation: null,// 'add' | 'subtract' | 'multiply' | 'divide'
   justEvaluated: false,
 };
-
-// ============================================================
-//  AUTHENTIFICATION
-// ============================================================
-
-function showAuthScreen() {
-  authScreen.hidden = false;
-  appScreen.hidden = true;
-}
-
-function showAppScreen() {
-  authScreen.hidden = true;
-  appScreen.hidden = false;
-  userEmailEl.textContent = session.email || "";
-  checkApi();
-  loadHistory();
-}
-
-function setSession(token, email) {
-  session.token = token;
-  session.email = email;
-  localStorage.setItem("token", token);
-  localStorage.setItem("email", email);
-}
-
-function clearSession() {
-  session.token = null;
-  session.email = null;
-  localStorage.removeItem("token");
-  localStorage.removeItem("email");
-}
-
-async function authenticate(mode) {
-  authMsg.textContent = "";
-  const email = emailEl.value.trim();
-  const password = passwordEl.value;
-  if (!email || !password) {
-    authMsg.textContent = "Email et mot de passe requis.";
-    return;
-  }
-
-  const path = mode === "signup" ? "/auth/signup" : "/auth/login";
-  try {
-    const res = await fetch(`${AUTH_BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      authMsg.textContent = data.error || "Échec de l'authentification.";
-      return;
-    }
-
-    if (data.access_token) {
-      setSession(data.access_token, (data.user && data.user.email) || email);
-      authForm.reset();
-      showAppScreen();
-    } else {
-      // Inscription avec confirmation d'email activée : pas de session immédiate
-      authMsg.textContent = "Compte créé. Vérifie ton email puis connecte-toi.";
-    }
-  } catch (err) {
-    authMsg.textContent = "Service d'authentification injoignable (port 4000 ?).";
-  }
-}
-
-authForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const mode = e.submitter && e.submitter.dataset.mode === "signup" ? "signup" : "login";
-  authenticate(mode);
-});
-
-logoutBtn.addEventListener("click", () => {
-  clearSession();
-  showAuthScreen();
-});
-
-// ============================================================
-//  HISTORIQUE
-// ============================================================
-
-async function loadHistory() {
-  if (!session.token) return;
-  try {
-    const res = await fetch(`${API_BASE}/history`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-    });
-    if (res.status === 401) {
-      // Token expiré → on déconnecte
-      clearSession();
-      showAuthScreen();
-      return;
-    }
-    const data = await res.json();
-    renderHistory(data.history || []);
-  } catch {
-    historyList.innerHTML = "<li class='history-empty'>Historique indisponible.</li>";
-  }
-}
-
-function renderHistory(items) {
-  if (items.length === 0) {
-    historyList.innerHTML = "<li class='history-empty'>Aucun calcul pour l'instant.</li>";
-    return;
-  }
-  historyList.innerHTML = items
-    .map((h) => {
-      const sym = OP_SYMBOLS[h.operation] || h.operation;
-      return `<li><span>${h.a} ${sym} ${h.b}</span><strong>${h.result}</strong></li>`;
-    })
-    .join("");
-}
-
-historyRefresh.addEventListener("click", loadHistory);
-
-// ============================================================
-//  CALCULATRICE
-// ============================================================
 
 function render() {
   displayEl.textContent = state.current;
@@ -196,6 +57,7 @@ function inputDigit(digit) {
 
 function chooseOperation(op) {
   clearError();
+  // Si une opération est déjà en attente, on évalue d'abord (chaînage)
   if (state.operation && state.previous !== null && !state.justEvaluated) {
     evaluate().then(() => {
       state.previous = state.current;
@@ -252,9 +114,7 @@ async function evaluate() {
   const url = `${API_BASE}/calculate?operation=${operation}&a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
 
   try {
-    const res = await fetch(url, {
-      headers: session.token ? { Authorization: `Bearer ${session.token}` } : {},
-    });
+    const res = await fetch(url);
     const data = await res.json();
 
     if (!res.ok) {
@@ -263,23 +123,22 @@ async function evaluate() {
       return;
     }
 
-    state.current = String(data.result);
+    // Affiche l'opération complète en haut de l'écran
+    expressionEl.textContent = `${a} ${OP_SYMBOLS[operation]} ${b} =`;
+    state.current = String(data.result); // convertit en string
     state.previous = null;
     state.operation = null;
     state.justEvaluated = true;
     apiStatusEl.textContent = "connectée";
     render();
     expressionEl.textContent = `${a} ${OP_SYMBOLS[operation]} ${b} =`;
-
-    if (data.saved) {
-      loadHistory(); // rafraîchir l'historique après un calcul enregistré
-    }
   } catch (err) {
     apiStatusEl.textContent = "hors ligne";
     showError("Impossible de joindre l'API (le serveur tourne-t-il sur le port 3000 ?).");
   }
 }
 
+// Gestion des clics
 document.querySelector(".keys").addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
@@ -299,8 +158,8 @@ document.querySelector(".keys").addEventListener("click", (e) => {
   }
 });
 
+// Support du clavier
 window.addEventListener("keydown", (e) => {
-  if (appScreen.hidden) return; // pas de raccourcis sur l'écran de connexion
   const key = e.key;
   if (/[0-9.]/.test(key)) {
     inputDigit(key);
@@ -323,6 +182,7 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// Vérifie la disponibilité de l'API au chargement
 async function checkApi() {
   try {
     const res = await fetch(`${API_BASE}/calculate?operation=add&a=0&b=0`);
@@ -332,12 +192,5 @@ async function checkApi() {
   }
 }
 
-// ============================================================
-//  DÉMARRAGE : connecté ? -> calculatrice, sinon -> login
-// ============================================================
 clearAll();
-if (session.token) {
-  showAppScreen();
-} else {
-  showAuthScreen();
-}
+checkApi();
