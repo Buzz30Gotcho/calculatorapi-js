@@ -1,337 +1,291 @@
 # 🧮 Calculator API — une calculatrice en microservices
 
-> Projet d'atelier Ynov : une **calculatrice web** dont le « cerveau » (le calcul)
-> est codé **3 fois, dans 3 langages différents** (Node.js, Java, Python), tous
-> interchangeables, le tout orchestré avec **Docker** et testé automatiquement
-> par une **CI GitHub Actions**.
+Une calculatrice web simple. Mais derrière, le calcul est codé **3 fois**, dans
+**3 langages** (Node.js, Java, Python), qu'on peut échanger comme on veut. Le tout
+tourne avec **Docker** et est testé tout seul par une **CI GitHub Actions**.
 
-Ce README est écrit pour un·e **débutant·e** : on explique chaque brique, pourquoi
-elle existe, et comment lancer le projet. Tout à la fin, il y a un **comparatif
-chiffré** entre les 3 langages du back sur un point concret du projet.
+Ce README explique le projet pour un débutant. À la fin, il y a un comparatif
+chiffré entre les 3 langages.
 
 ---
 
 ## 1. C'est quoi, ce projet ?
 
-À l'écran, c'est une simple calculatrice : on tape `3 + 6`, on obtient `9`.
+À l'écran, c'est une calculatrice. On tape `3 + 6`, on obtient `9`.
 
-Mais derrière ce bouton « = », il se passe beaucoup de choses :
+Mais derrière le bouton « = », il se passe ça :
 
-1. La page web envoie le calcul à un **serveur**.
+1. La page web envoie le calcul à un serveur.
 2. Le serveur calcule et renvoie le résultat.
-3. Si tu es **connecté**, le calcul est **sauvegardé** dans un historique.
+3. Si tu es connecté, le calcul est sauvegardé dans un historique.
 
-L'intérêt pédagogique du projet n'est PAS la calculatrice elle-même (additionner
-deux nombres, c'est facile). L'intérêt, c'est **comment on construit, découpe,
-conteneurise et teste une application moderne**. C'est un projet sur
-l'**architecture** et les **tests**, déguisé en calculatrice.
+Le but du projet n'est pas la calculatrice. Additionner deux nombres, c'est
+facile. Le but, c'est d'apprendre à **construire, découper et tester une vraie
+application**. C'est un projet sur l'architecture et les tests, déguisé en
+calculatrice.
 
 ---
 
 ## 2. C'est quoi le « mode microservices » ?
 
-Imagine un restaurant.
+Prends l'image d'un restaurant.
 
-- **Approche monolithe** (classique) : une seule personne prend la commande,
-  cuisine, fait le service, encaisse et fait la vaisselle. Si elle tombe malade,
-  tout s'arrête.
-- **Approche microservices** (ce projet) : chaque tâche a sa propre personne
-  spécialisée. Un serveur prend la commande, un cuisinier cuisine, un caissier
-  encaisse. Chacun fait **une seule chose, mais bien**. On peut remplacer le
-  cuisinier sans toucher au caissier.
+- **Sans microservices** : une seule personne prend la commande, cuisine, sert et
+  encaisse. Si elle s'arrête, tout s'arrête.
+- **Avec microservices** : chaque tâche a sa personne. Un serveur, un cuisinier,
+  un caissier. Chacun fait une seule chose. On peut changer le cuisinier sans
+  toucher au caissier.
 
-Ici, le principe est : **« 1 service = 1 responsabilité »**. L'appli est donc
-découpée en **plusieurs petits programmes indépendants** qui communiquent par le
-réseau (HTTP).
+La règle ici : **1 service = 1 rôle**. L'appli est donc coupée en plusieurs petits
+programmes séparés qui se parlent par le réseau.
 
 ### Les services du projet
 
-| Service | Dossier | Rôle (en une phrase) | Techno |
+| Service | Dossier | Ce qu'il fait | Techno |
 |---|---|---|---|
-| **Front (UX)** | `front/` | La page web de la calculatrice (ce que tu vois). | HTML / CSS / JS, servi par Nginx |
-| **Gateway** | `gateway/` | Le « standard téléphonique » : reçoit toutes les requêtes et les redirige vers le bon service. | Node.js + Express |
-| **Back de calcul** | `back/`, `back-java/`, `back-python/` | Fait le calcul. **3 versions interchangeables.** | Node / Java / Python |
-| **Auth-service** | `auth-service/` | Gère l'inscription / connexion (via Supabase). | Node.js |
-| **History-service** | `history-service/` | Enregistre et relit l'historique des calculs. | Node.js + PostgreSQL |
-| **Base de données** | (image Docker) | Stocke l'historique de façon durable. | PostgreSQL 16 |
+| **Front** | `front/` | La page web qu'on voit. | HTML / CSS / JS + Nginx |
+| **Gateway** | `gateway/` | Le standard téléphonique : reçoit tout et redirige au bon service. | Node.js + Express |
+| **Back de calcul** | `back/`, `back-java/`, `back-python/` | Fait le calcul. **3 versions au choix.** | Node / Java / Python |
+| **Auth** | `auth-service/` | Inscription et connexion. | Node.js + Supabase |
+| **History** | `history-service/` | Sauvegarde et relit l'historique. | Node.js + PostgreSQL |
+| **Base de données** | (image Docker) | Garde l'historique. | PostgreSQL 16 |
 
-### Le point clé : 3 backs de calcul interchangeables
+### Le point clé : 3 backs au choix
 
-Les trois backs (`back/` en Node, `back-java/` en Java, `back-python/` en Python)
-exposent **exactement la même API** :
+Les trois backs font la même chose, avec la même adresse :
 
 ```
-GET /calculate?operation=add&a=3&b=6   →   200 {"operation":"add","a":3,"b":6,"result":9}
+GET /calculate?operation=add&a=3&b=6   →   {"operation":"add","a":3,"b":6,"result":9}
 ```
 
-Ils sont donc **strictement interchangeables**. C'est toi qui **choisis lequel
-faire tourner** (ce n'est PAS un système de secours automatique : on décide
-explicitement quel back lancer). Le choix se fait au démarrage via un fichier
-Docker Compose d'« override » — voir la section *Lancer le projet*.
+Du coup ils sont interchangeables. C'est toi qui choisis lequel lancer. Ce n'est
+pas un système de secours automatique : tu décides. Le choix se fait au démarrage
+(voir plus bas).
 
 ---
 
-## 3. Schéma de l'architecture
+## 3. Le schéma
 
 ```mermaid
 flowchart TD
-    U[Navigateur<br/>http://localhost:8081] --> F[Front / UX<br/>Nginx]
-    F -->|toutes les requetes| GW[Gateway<br/>Express - port 8088]
+    U[Navigateur<br/>localhost:8081] --> F[Front<br/>Nginx]
+    F -->|tout passe ici| GW[Gateway<br/>port 8088]
 
     GW -->|/calculate| CALC{Back de calcul<br/>UN SEUL au choix}
-    GW -->|/auth/*| AUTH[Auth-service<br/>port 4000]
-    GW -->|/history| HIST[History-service<br/>port 4500]
+    GW -->|/auth/*| AUTH[Auth<br/>port 4000]
+    GW -->|/history| HIST[History<br/>port 4500]
 
-    CALC -.->|option 1| NODE[Node.js - 3000]
-    CALC -.->|option 2| JAVA[Java - 3001]
-    CALC -.->|option 3| PY[Python - 3002]
+    CALC -.->|choix 1| NODE[Node.js - 3000]
+    CALC -.->|choix 2| JAVA[Java - 3001]
+    CALC -.->|choix 3| PY[Python - 3002]
 
-    AUTH --> SUPA[(Supabase<br/>auth externe)]
-    HIST --> DB[(PostgreSQL 16)]
+    AUTH --> SUPA[(Supabase)]
+    HIST --> DB[(PostgreSQL)]
 ```
 
-### Que se passe-t-il quand on clique sur « = » ?
+### Ce qui se passe quand on clique sur « = »
 
 ```mermaid
 sequenceDiagram
     participant U as Navigateur
     participant G as Gateway
     participant C as Back de calcul
-    participant H as History-service
+    participant H as History
     participant DB as PostgreSQL
 
     U->>G: GET /calculate?operation=add&a=3&b=6
     G->>C: redirige vers le back choisi
     C-->>G: { result: 9 }
     G-->>U: { result: 9 }
-    Note over U: Si l'utilisateur est connecte...
+    Note over U: Si on est connecte...
     U->>G: POST /history (resultat + token)
-    G->>H: redirige (avec le token)
-    H->>DB: INSERT du calcul
+    G->>H: redirige
+    H->>DB: enregistre le calcul
     DB-->>H: ok
-    H-->>U: enregistre
+    H-->>U: sauvegarde
 ```
 
-Point important : **la sauvegarde est indépendante du back de calcul**. Que le
-calcul ait été fait par Node, Java ou Python, c'est toujours `history-service`
-(+ PostgreSQL) qui le stocke. Chaque service ne s'occupe que de SA tâche.
+À retenir : la sauvegarde ne dépend pas du back de calcul. Que le calcul vienne de
+Node, Java ou Python, c'est toujours le service History qui le range. Chaque
+service fait sa part, et c'est tout.
 
 ---
 
-## 4. Les langages et technologies utilisés
+## 4. Les langages et outils
 
-| Couche | Technologies |
+| Partie | Techno |
 |---|---|
-| **Front** | HTML, CSS, JavaScript « vanilla » (sans framework), servi par **Nginx** |
-| **Gateway** | **Node.js** + **Express** + `http-proxy-middleware` + `cors` + `morgan` |
-| **Back de calcul** | **Node.js** (module `http`), **Java 17** (`com.sun.net.httpserver`), **Python 3.12** (`http.server`) |
-| **Auth** | **Node.js** + **Supabase** (service d'authentification externe, JWT) |
-| **Historique** | **Node.js** + **Express** + **PostgreSQL** (`pg`) + `jsonwebtoken` |
-| **Tests** | **Jest** (Node), **JUnit 5** (Java), **pytest** (Python), **Playwright** (tests end-to-end) |
+| **Front** | HTML, CSS, JavaScript (sans framework), servi par **Nginx** |
+| **Gateway** | **Node.js** + **Express** + `http-proxy-middleware` |
+| **Back de calcul** | **Node.js** (`http`), **Java 17** (`com.sun.net.httpserver`), **Python 3.12** (`http.server`) |
+| **Auth** | **Node.js** + **Supabase** |
+| **History** | **Node.js** + **Express** + **PostgreSQL** |
+| **Tests** | **Jest** (Node), **JUnit 5** (Java), **pytest** (Python), **Playwright** (bout-en-bout) |
 | **Conteneurs** | **Docker** + **Docker Compose** |
-| **CI/CD** | **GitHub Actions** |
+| **CI** | **GitHub Actions** |
 
-> 💡 **Détail volontaire et intéressant :** les 3 backs de calcul n'utilisent
-> **aucun framework web ni aucune dépendance externe**. Chacun se contente du
-> **serveur HTTP intégré à son langage**. C'est un choix pédagogique : voir
-> comment chaque langage gère « à la main » le même problème (router une URL,
-> lire des paramètres, renvoyer du JSON). C'est aussi ce qui rend le comparatif
-> de la section 7 honnête : on compare des choses vraiment équivalentes.
+> 💡 À noter : les 3 backs n'utilisent **aucun framework, aucune dépendance**. Ils
+> se servent juste du serveur HTTP déjà fourni par le langage. C'est voulu : on
+> voit comment chaque langage gère le même problème à la main. Et ça rend le
+> comparatif de la section 7 honnête, car on compare la même chose.
 
 ---
 
 ## 5. Lancer le projet
 
-### Prérequis
-- **Docker** et **Docker Compose** installés.
+### Il te faut
+- **Docker** et **Docker Compose**.
 
-### Démarrer la stack avec le back de ton choix
+### Démarrer avec le back de ton choix
 
 La base (gateway, auth, history, base de données, front) est dans
-`docker-compose.yml`. Le **back de calcul n'y est pas** : on l'ajoute avec un
-fichier d'« override » selon le langage voulu.
+`docker-compose.yml`. Le back de calcul, lui, n'y est pas. On l'ajoute avec un
+fichier à part selon le langage voulu.
 
 ```bash
-# Avec le back Python (le défaut du projet)
+# Back Python (le choix par défaut)
 docker compose -f docker-compose.yml -f compose.python.yml up -d --build
 
-# Avec le back Java
+# Back Java
 docker compose -f docker-compose.yml -f compose.java.yml up -d --build
 
-# Avec le back Node.js
+# Back Node.js
 docker compose -f docker-compose.yml -f compose.node.yml up -d --build
 ```
 
-Puis ouvre **http://localhost:8081** 🎉
+Puis ouvre **http://localhost:8081**.
 
-> ⚠️ **Piège à connaître :** pour **arrêter** la stack, il faut **repasser le
-> même override**, sinon le conteneur du back ne sera pas arrêté (la base ne le
-> connaît pas) :
+> ⚠️ Attention pour arrêter : il faut repasser le même fichier, sinon le back ne
+> s'arrête pas.
 > ```bash
 > docker compose -f docker-compose.yml -f compose.python.yml down
 > ```
 
-### Les ports utilisés
+### Les ports
 
 | Port | Service |
 |---|---|
 | `8081` | Front (la page web) |
-| `8088` | Gateway (point d'entrée des requêtes) |
-| `4000` | Auth-service |
-| `4500` | History-service |
+| `8088` | Gateway (l'entrée) |
+| `4000` | Auth |
+| `4500` | History |
 | `3000 / 3001 / 3002` | Back Node / Java / Python (interne) |
 
 ---
 
 ## 6. Les tests
 
-Chaque service a ses propres tests, et la CI vérifie tout à chaque `push`.
+Chaque service a ses tests. La CI relance tout à chaque `push`.
 
-| Back | Outil | Nb de tests | Comment lancer |
+| Back | Outil | Tests | Commande |
 |---|---|---|---|
-| Node (`back/`) | Jest | **53** | `npm test` |
-| Java (`back-java/`) | JUnit 5 | **30** | `mvn test` |
-| Python (`back-python/`) | pytest | **30** | `python -m pytest` |
+| Node (`back/`) | Jest | 53 | `npm test` |
+| Java (`back-java/`) | JUnit 5 | 30 | `mvn test` |
+| Python (`back-python/`) | pytest | 30 | `python -m pytest` |
 | Auth (`auth-service/`) | Jest | — | `npm test` |
 | Bout-en-bout (`e2e/`) | Playwright | — | `npx playwright test` |
 
-### Le pipeline CI (GitHub Actions, `.github/workflows/ci.yml`)
+### La CI (`.github/workflows/ci.yml`)
 
 ```mermaid
 flowchart LR
-    L[Lint ESLint] --> TN[Tests Node]
+    L[Lint] --> TN[Tests Node]
     L --> TJ[Tests Java]
     L --> TP[Tests Python]
     L --> TA[Tests Auth]
-    TN --> D[Build + smoke test Docker]
+    TN --> D[Build Docker]
     TJ --> D
     TP --> D
     TA --> D
-    TN --> E[E2E Playwright x3 backends]
+    TN --> E[E2E x3 backends]
     TJ --> E
     TP --> E
     TA --> E
 ```
 
-Les tests E2E sont lancés **3 fois** (un job par backend : node, java, python),
-ce qui **prouve que les 3 backs sont vraiment interchangeables** : la même page
-web et les mêmes scénarios passent quel que soit le langage derrière.
+Les tests E2E tournent **3 fois**, une fois par back. Ça prouve que les 3 backs
+sont vraiment interchangeables : la même page et les mêmes tests passent, peu
+importe le langage derrière.
 
 ---
 
-## 7. ⭐ Comparatif des 3 langages : la vitesse des tests en CI
+## 7. ⭐ Comparatif des 3 langages : la vitesse des tests
 
-C'est le point concret demandé. Le projet implémente **le même back de calcul,
-avec la même API, en n'utilisant que la bibliothèque standard de chaque langage**.
-On peut donc comparer équitablement : **combien de temps prend chaque langage
-dans la CI GitHub Actions ?**
+C'est le point demandé. Le projet code la même chose dans 3 langages. On peut donc
+comparer une question simple : **lequel exécute ses tests le plus vite ?**
 
-> ⚙️ Chiffres **réels**, relevés sur un run de la CI (`CI — Tests & Couverture`,
-> branche `main`, 24/06/2026). Ce sont les **durées des jobs GitHub Actions**,
-> mesurées via l'API GitHub. Un job = checkout + installation de
-> l'environnement + installation des dépendances + exécution des tests.
+> ⚙️ Chiffres réels, lus dans les logs de la CI (run du 24/06/2026). Ce sont les
+> temps donnés par chaque outil de test (`Time:` de Jest, `passed in` de pytest,
+> `Time elapsed` de Surefire). On ne compte que les tests. On ne compte pas le
+> téléchargement, l'install ou le build Docker.
 
-### 7.1 — Les jobs de tests unitaires
-
-| Job CI | Langage | Outil | Nb de tests | Durée du job |
-|---|---|---|---|---|
-| `Tests Java (JUnit)` | 🔴 Java | JUnit + Maven | 30 | **18 s** |
-| `Tests Node.js` | 🟡 Node.js | Jest | 53 | **19 s** |
-| `Tests Python (pytest)` | 🟢 Python | pytest | 30 | **19 s** |
+| Langage | Outil | Tests | Temps des tests |
+|---|---|---|---|
+| 🟢 **Python** | pytest | 30 | **0,60 s** |
+| 🟡 **Node.js** | Jest | 53 | **0,95 s** |
+| 🔴 **Java** | JUnit + Surefire | 30 | **1,82 s** |
 
 ```mermaid
 xychart-beta
-    title "Duree du job de tests unitaires en CI (secondes)"
-    x-axis ["Java (JUnit)", "Node.js (Jest)", "Python (pytest)"]
-    y-axis "Secondes" 0 --> 25
-    bar [18, 19, 19]
-```
-
-**Surprise : les trois sont quasi à égalité (~18–19 s).** C'est l'enseignement le
-plus intéressant. En local, Java semblait le plus lent (démarrage JVM + Maven).
-Mais en CI, le temps est **dominé par le « décor » commun** à tous les jobs —
-cloner le dépôt, installer Java/Node/Python, télécharger les dépendances — pas par
-le calcul des tests lui-même. L'exécution réelle des tests (quelques centaines de
-millisecondes) est **noyée** dans ce temps de préparation. Conclusion : sur de
-petits projets, **le choix du langage ne change presque rien** au temps de CI.
-
-### 7.2 — Là où le langage fait vraiment la différence : les jobs E2E
-
-La CI lance aussi les tests bout-en-bout (Playwright) **une fois par backend**.
-Chaque job doit **construire l'image Docker du back** puis démarrer toute la stack.
-Et là, l'écart entre langages devient net :
-
-| Job CI | Backend testé | Durée du job |
-|---|---|---|
-| `E2E Playwright (back = python)` | 🟢 Python | **61 s** |
-| `E2E Playwright (back = node)` | 🟡 Node.js | **142 s** |
-| `E2E Playwright (back = java)` | 🔴 Java | **163 s** |
-
-```mermaid
-xychart-beta
-    title "Duree du job E2E selon le backend (secondes)"
+    title "Temps des tests en CI (secondes, plus bas = plus rapide)"
     x-axis ["Python", "Node.js", "Java"]
-    y-axis "Secondes" 0 --> 180
-    bar [61, 142, 163]
+    y-axis "Secondes" 0 --> 2
+    bar [0.60, 0.95, 1.82]
 ```
 
-**Ici Python écrase la concurrence (2,5× plus rapide que Java).** La raison n'est
-pas l'exécution des tests (ce sont les mêmes scénarios Playwright), mais la
-**construction de l'image Docker du backend** :
+### Ce que ça veut dire
 
-- 🟢 **Python** : pas de compilation, image légère → build le plus rapide.
-- 🟡 **Node.js** : `npm install` à faire dans l'image → un peu plus lourd.
-- 🔴 **Java** : il faut **compiler le code avec Maven** et télécharger ses
-  dépendances dans l'image → c'est le plus long à préparer.
+- 🟢 **Python : 0,60 s.** Le plus rapide. Il démarre vite et pytest est léger.
+- 🟡 **Node.js : 0,95 s.** Juste derrière, alors qu'il a 53 tests (presque le
+  double). Jest est un peu plus lourd à lancer.
+- 🔴 **Java : 1,82 s.** Le plus lent. Mais le détail des logs est intéressant :
 
-### La leçon à retenir
+| Tests Java | Tests | Temps |
+|---|---|---|
+| `CalculatorTest` (juste le calcul) | 23 | **0,146 s** ⚡ |
+| `ServerTest` (lance un vrai serveur) | 7 | **1,675 s** 🐢 |
 
-| Question | Réponse mesurée en CI |
-|---|---|
-| Le langage change-t-il le temps des **tests unitaires** ? | Quasiment pas (~18–19 s pour tous) : le setup du runner domine. |
-| Le langage change-t-il le temps du **build + E2E** ? | Beaucoup : Python 61 s, Node 142 s, Java 163 s. |
-| Pourquoi Java est-il le plus lent en E2E ? | Compilation Maven + dépendances à construire dans l'image Docker. |
-| Pourquoi Python est-il le plus rapide en E2E ? | Langage interprété : aucune étape de compilation, image plus légère. |
+Donc en Java, le calcul tout seul est ultra-rapide (0,146 s). Ce qui prend du
+temps, c'est de démarrer la JVM et un vrai serveur dans les tests. Ce n'est pas le
+calcul qui est lent, c'est la mise en route.
 
-👉 **Conclusion :** il n'y a pas de « meilleur langage » dans l'absolu. Sur ce
-projet, le langage **ne pèse pas sur le temps des tests unitaires** (le décor de
-la CI domine), mais il pèse **fortement sur le temps de build Docker** : le
-**Python interprété démarre vite** quand le **Java compilé paie un coût de
-construction** (qui, en contrepartie, donne du code plus rapide à l'exécution).
-Coder la *même* chose trois fois permet de **mesurer** ce compromis au lieu de le
-lire dans un cours.
+> 📝 Maven affiche aussi `Total time: 5,40 s`. Mais ça compte aussi la
+> compilation. Ce n'est plus juste les tests, donc on ne le garde pas.
+
+### En clair
+
+Pas de « meilleur langage ». Python et Node démarrent vite, donc ils sont
+pratiques quand on relance souvent les tests. Java met plus de temps à se lancer,
+mais une fois lancé, son calcul est le plus rapide. Coder la même chose 3 fois
+permet de le voir pour de vrai, pas juste en théorie.
 
 ---
 
-## 8. Arborescence du projet
+## 8. Les dossiers
 
 ```
 calculatorapi-js/
-├── front/                 # La page web (HTML/CSS/JS + Nginx)
-├── gateway/               # Le standard téléphonique (Express)
+├── front/                 # La page web
+├── gateway/               # L'entrée (redirige les requêtes)
 ├── back/                  # Back de calcul — Node.js
-├── back-java/             # Back de calcul — Java 17 (Maven)
+├── back-java/             # Back de calcul — Java 17
 ├── back-python/           # Back de calcul — Python 3.12
-├── auth-service/          # Inscription / connexion (Supabase)
-├── history-service/       # Historique des calculs (+ PostgreSQL)
+├── auth-service/          # Inscription / connexion
+├── history-service/       # Historique (+ PostgreSQL)
 ├── e2e/                   # Tests bout-en-bout (Playwright)
-├── docker-compose.yml     # Stack de base (sans back de calcul)
-├── compose.node.yml       # Override : ajoute le back Node
-├── compose.java.yml       # Override : ajoute le back Java
-├── compose.python.yml     # Override : ajoute le back Python
-└── .github/workflows/ci.yml  # Pipeline CI (lint + tests + Docker + E2E)
+├── docker-compose.yml     # La base (sans back de calcul)
+├── compose.node.yml       # Ajoute le back Node
+├── compose.java.yml       # Ajoute le back Java
+├── compose.python.yml     # Ajoute le back Python
+└── .github/workflows/ci.yml  # La CI
 ```
 
 ---
 
 ## 9. En résumé
 
-- Une **calculatrice web** simple en façade…
-- …mais une vraie **architecture microservices** derrière (« 1 service = 1 rôle »).
-- Le **cœur de calcul est écrit 3 fois** (Node, Java, Python), tous
-  interchangeables, ce qui permet de **comparer les langages** sur un même
-  terrain.
-- Tout est **conteneurisé** (Docker) et **testé automatiquement** (CI :
-  lint, tests unitaires des 3 langages, build Docker, E2E sur les 3 backends).
-- Bonus pédagogique : un **comparatif chiffré** de la vitesse des tests qui
-  montre concrètement les compromis Python vs Node vs Java.
+- Une calculatrice simple à l'écran.
+- Une vraie architecture microservices derrière (1 service = 1 rôle).
+- Le calcul est codé 3 fois (Node, Java, Python), au choix.
+- Tout tourne avec Docker et est testé tout seul par la CI.
+- Bonus : un comparatif chiffré de la vitesse des tests entre les 3 langages.
