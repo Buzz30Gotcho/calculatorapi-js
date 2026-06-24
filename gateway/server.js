@@ -7,9 +7,16 @@ const app = express();
 const PORT = process.env.PORT || 8088;
 
 
-const CALC_BACKEND = process.env.CALC_BACKEND || 'http://python-api:3002';
+const CALC_BACKEND = process.env.CALC_BACKEND;
 const AUTH_URL = process.env.AUTH_URL || 'http://auth-service:4000';
 const HISTORY_URL = process.env.HISTORY_URL || 'http://history-service:4500';
+
+
+if (!CALC_BACKEND) {
+    console.error(' CALC_BACKEND manquant — lance le gateway via un override, ex :');
+    console.error('   docker compose -f docker-compose.yml -f compose.python.yml up -d --build');
+    process.exit(1);
+}
 
 // --- Logs et CORS
 app.use(morgan('dev'));
@@ -26,7 +33,6 @@ const routes = [
     { path: '/history', target: HISTORY_URL },
 ];
 
-console.log('\n=== 🚀 API Gateway calculatrice ===');
 routes.forEach(({ path, target }) => {
     console.log(`${path.padEnd(12)} → ${target}`);
 });
@@ -54,5 +60,5 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`✅ API Gateway sur http://localhost:${PORT}`);
+    console.log(`API Gateway sur http://localhost:${PORT}`);
 });

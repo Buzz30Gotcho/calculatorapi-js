@@ -1,4 +1,4 @@
-"""Tests unitaires de la classe Calculator (équivalent calculator.test.js)."""
+"""Tests unitaires de la classe Calculator ."""
 
 import sys
 from pathlib import Path

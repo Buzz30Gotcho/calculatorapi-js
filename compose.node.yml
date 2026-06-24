@@ -1,0 +1,14 @@
+# Override : back de calcul = Node.js
+#   docker compose -f docker-compose.yml -f compose.node.yml up -d --build
+services:
+  node-api:
+    build: ./back
+    image: calculatorapi-node
+    container_name: calculatorapi-node
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  gateway:
+    environment:
+      CALC_BACKEND: http://node-api:3000

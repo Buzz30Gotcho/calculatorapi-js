@@ -1,4 +1,4 @@
-"""Logique métier de la calculatrice (équivalent du Calculator Node.js)."""
+
 
 
 class Calculator:

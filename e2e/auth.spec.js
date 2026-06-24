@@ -5,15 +5,15 @@ async function mockAuth(page, { loginOk = true, signupOk = true } = {}) {
   await page.route("**/auth/login", (route) =>
     loginOk
       ? route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ access_token: "fake-jwt", user: { email: "e2e@test.com" } }),
-        })
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ access_token: "fake-jwt", user: { email: "e2e@test.com" } }),
+      })
       : route.fulfill({
-          status: 400,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "Invalid login credentials" }),
-        })
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Invalid login credentials" }),
+      })
   );
   await page.route("**/auth/signup", (route) =>
     route.fulfill({
@@ -42,16 +42,6 @@ test("au chargement, l'écran de connexion est affiché et la calculatrice masqu
   await expect(page.locator("#appScreen")).toBeHidden();
 });
 
-test("connexion réussie : la calculatrice apparaît avec l'email de l'utilisateur", async ({ page }) => {
-  await mockAuth(page);
-  await page.goto("/");
-  await page.fill("#email", "e2e@test.com");
-  await page.fill("#password", "secret");
-  await page.click('button[data-mode="login"]');
-
-  await expect(page.locator("#appScreen")).toBeVisible();
-  await expect(page.locator("#userEmail")).toHaveText("e2e@test.com");
-});
 
 test("connexion échouée : message d'erreur, calculatrice toujours masquée", async ({ page }) => {
   await mockAuth(page, { loginOk: false });

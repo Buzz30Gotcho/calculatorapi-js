@@ -16,14 +16,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Serveur HTTP de la calculatrice — même contrat que l'API Node.js.
- * Utilise le serveur HTTP intégré au JDK (com.sun.net.httpserver), sans framework.
+ * Serveur HTTP de la calculatrice
+ * Utilise le serveur HTTP intégré au JDK .
  */
 public class Server {
 
     static final int PORT = 3001;
-    static final List<String> VALID_OPERATIONS =
-            Arrays.asList("add", "subtract", "multiply", "divide");
+    static final List<String> VALID_OPERATIONS = Arrays.asList("add", "subtract", "multiply", "divide");
 
     public static void main(String[] args) throws IOException {
         HttpServer server = createServer(PORT);

@@ -23,7 +23,6 @@ const authForm = document.getElementById("authForm");
 const authMsg = document.getElementById("authMsg");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
-const userEmailEl = document.getElementById("userEmail");
 const logoutBtn = document.getElementById("logoutBtn");
 const historyListEl = document.getElementById("historyList");
 const historyRefreshBtn = document.getElementById("historyRefresh");
@@ -235,10 +234,9 @@ function showAuthScreen() {
   authScreen.hidden = false;
 }
 
-function showAppScreen(email) {
+function showAppScreen() {
   authScreen.hidden = true;
   appScreen.hidden = false;
-  if (email) userEmailEl.textContent = email;
   checkApi();
   loadHistory();
 }
@@ -278,7 +276,7 @@ async function handleAuth(mode) {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(EMAIL_KEY, email);
     showAuthMsg("");
-    showAppScreen(email);
+    showAppScreen();
   } catch {
     showAuthMsg("Impossible de joindre l'auth-service (port 4000 ?).");
   }
@@ -358,7 +356,7 @@ historyRefreshBtn.addEventListener("click", loadHistory);
 clearAll();
 if (getToken()) {
   // Session déjà ouverte : on va directement à la calculatrice.
-  showAppScreen(localStorage.getItem(EMAIL_KEY) || "");
+  showAppScreen();
 } else {
   showAuthScreen();
 }

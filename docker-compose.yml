@@ -1,21 +1,16 @@
 # ============================================================
-#  Stack complète : les 3 services de calcul + l'UX
-#  Chaque service expose le MÊME contrat /calculate sur son port.
+#  STACK DE BASE : gateway + auth + history + db + front (ux)
+#  Le back de calcul n'est PAS ici : on le choisit via un
+#  fichier d'override compose.<back>.yml.
 #
-#    docker compose up -d            -> tout
-#    docker compose up -d node-api   -> un seul service
+#    docker compose -f docker-compose.yml -f compose.python.yml up -d --build
+#    docker compose -f docker-compose.yml -f compose.java.yml   up -d --build
+#    docker compose -f docker-compose.yml -f compose.node.yml   up -d --build
+#
+#  Chaque override ajoute SON back + règle CALC_BACKEND du gateway.
 # ============================================================
 
 services:
-
-  # --- API Node.js : service de CALCUL pur (comme java/python) ---
-  node-api:
-    build: ./back
-    image: calculatorapi-node
-    container_name: calculatorapi-node
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
 
   auth-service:
     build: ./auth-service
@@ -28,32 +23,13 @@ services:
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
     restart: unless-stopped
 
-  # --- API Java (JUnit) ---
-  java-api:
-    build: ./back-java
-    image: calculatorapi-java
-    container_name: calculatorapi-java
-    ports:
-      - "3003:3001"
-    restart: unless-stopped
-
-  # --- API Python (pytest) ---
-  python-api:
-    build: ./back-python
-    image: calculatorapi-python
-    container_name: calculatorapi-python
-    ports:
-      - "3002:3002"
-    restart: unless-stopped
-
   gateway:
     build: ./gateway
     image: calculatorapi-gateway
     container_name: calculatorapi-gateway
     ports:
       - "8088:8088"
-    environment:
-      CALC_BACKEND: ${CALC_BACKEND:-http://python-api:3002}
+    # CALC_BACKEND est fourni par le fichier d'override (compose.<back>.yml).
     restart: unless-stopped
 
   # --- Base de données PostgreSQL (vrai service réseau) ---

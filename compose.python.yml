@@ -1,0 +1,14 @@
+# Override : back de calcul = Python
+#   docker compose -f docker-compose.yml -f compose.python.yml up -d --build
+services:
+  python-api:
+    build: ./back-python
+    image: calculatorapi-python
+    container_name: calculatorapi-python
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+
+  gateway:
+    environment:
+      CALC_BACKEND: http://python-api:3002

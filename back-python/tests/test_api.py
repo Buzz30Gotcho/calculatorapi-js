@@ -1,7 +1,3 @@
-"""Tests d'intégration de l'API HTTP (équivalent api.test.js).
-
-On démarre le serveur sur un port libre dans un thread, puis on tape dessus.
-"""
 
 import json
 import sys

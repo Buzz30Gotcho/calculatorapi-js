@@ -213,18 +213,9 @@ h1 {
 /* ---------- Barre utilisateur ---------- */
 .topbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 0.75rem;
-}
-
-.topbar-user {
-  font-size: 0.75rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60%;
 }
 
 .logout-btn {

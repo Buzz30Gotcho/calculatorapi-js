@@ -1,0 +1,14 @@
+# Override : back de calcul = Java
+#   docker compose -f docker-compose.yml -f compose.java.yml up -d --build
+services:
+  java-api:
+    build: ./back-java
+    image: calculatorapi-java
+    container_name: calculatorapi-java
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  gateway:
+    environment:
+      CALC_BACKEND: http://java-api:3001
