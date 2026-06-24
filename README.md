@@ -4,9 +4,6 @@ Une calculatrice web simple. Mais derrière, le calcul est codé **3 fois**, dan
 **3 langages** (Node.js, Java, Python), qu'on peut échanger comme on veut. Le tout
 tourne avec **Docker** et est testé tout seul par une **CI GitHub Actions**.
 
-Ce README explique le projet pour un débutant. À la fin, il y a un comparatif
-chiffré entre les 3 langages.
-
 ---
 
 ## 1. C'est quoi, ce projet ?
@@ -41,14 +38,14 @@ programmes séparés qui se parlent par le réseau.
 
 ### Les services du projet
 
-| Service | Dossier | Ce qu'il fait | Techno |
-|---|---|---|---|
-| **Front** | `front/` | La page web qu'on voit. | HTML / CSS / JS + Nginx |
-| **Gateway** | `gateway/` | Le standard téléphonique : reçoit tout et redirige au bon service. | Node.js + Express |
-| **Back de calcul** | `back/`, `back-java/`, `back-python/` | Fait le calcul. **3 versions au choix.** | Node / Java / Python |
-| **Auth** | `auth-service/` | Inscription et connexion. | Node.js + Supabase |
-| **History** | `history-service/` | Sauvegarde et relit l'historique. | Node.js + PostgreSQL |
-| **Base de données** | (image Docker) | Garde l'historique. | PostgreSQL 16 |
+| Service             | Dossier                               | Ce qu'il fait                                                      | Techno                  |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------ | ----------------------- |
+| **Front**           | `front/`                              | La page web qu'on voit.                                            | HTML / CSS / JS + Nginx |
+| **Gateway**         | `gateway/`                            | Le standard téléphonique : reçoit tout et redirige au bon service. | Node.js + Express       |
+| **Back de calcul**  | `back/`, `back-java/`, `back-python/` | Fait le calcul. **3 versions au choix.**                           | Node / Java / Python    |
+| **Auth**            | `auth-service/`                       | Inscription et connexion.                                          | Node.js + Supabase      |
+| **History**         | `history-service/`                    | Sauvegarde et relit l'historique.                                  | Node.js + PostgreSQL    |
+| **Base de données** | (image Docker)                        | Garde l'historique.                                                | PostgreSQL 16           |
 
 ### Le point clé : 3 backs au choix
 
@@ -113,16 +110,16 @@ service fait sa part, et c'est tout.
 
 ## 4. Les langages et outils
 
-| Partie | Techno |
-|---|---|
-| **Front** | HTML, CSS, JavaScript (sans framework), servi par **Nginx** |
-| **Gateway** | **Node.js** + **Express** + `http-proxy-middleware` |
+| Partie             | Techno                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Front**          | HTML, CSS, JavaScript (sans framework), servi par **Nginx**                                   |
+| **Gateway**        | **Node.js** + **Express** + `http-proxy-middleware`                                           |
 | **Back de calcul** | **Node.js** (`http`), **Java 17** (`com.sun.net.httpserver`), **Python 3.12** (`http.server`) |
-| **Auth** | **Node.js** + **Supabase** |
-| **History** | **Node.js** + **Express** + **PostgreSQL** |
-| **Tests** | **Jest** (Node), **JUnit 5** (Java), **pytest** (Python), **Playwright** (bout-en-bout) |
-| **Conteneurs** | **Docker** + **Docker Compose** |
-| **CI** | **GitHub Actions** |
+| **Auth**           | **Node.js** + **Supabase**                                                                    |
+| **History**        | **Node.js** + **Express** + **PostgreSQL**                                                    |
+| **Tests**          | **Jest** (Node), **JUnit 5** (Java), **pytest** (Python), **Playwright** (bout-en-bout)       |
+| **Conteneurs**     | **Docker** + **Docker Compose**                                                               |
+| **CI**             | **GitHub Actions**                                                                            |
 
 > 💡 À noter : les 3 backs n'utilisent **aucun framework, aucune dépendance**. Ils
 > se servent juste du serveur HTTP déjà fourni par le langage. C'est voulu : on
@@ -163,12 +160,12 @@ Puis ouvre **http://localhost:8081**.
 
 ### Les ports
 
-| Port | Service |
-|---|---|
-| `8081` | Front (la page web) |
-| `8088` | Gateway (l'entrée) |
-| `4000` | Auth |
-| `4500` | History |
+| Port                 | Service                             |
+| -------------------- | ----------------------------------- |
+| `8081`               | Front (la page web)                 |
+| `8088`               | Gateway (l'entrée)                  |
+| `4000`               | Auth                                |
+| `4500`               | History                             |
 | `3000 / 3001 / 3002` | Back Node / Java / Python (interne) |
 
 ---
@@ -177,13 +174,13 @@ Puis ouvre **http://localhost:8081**.
 
 Chaque service a ses tests. La CI relance tout à chaque `push`.
 
-| Back | Outil | Tests | Commande |
-|---|---|---|---|
-| Node (`back/`) | Jest | 53 | `npm test` |
-| Java (`back-java/`) | JUnit 5 | 30 | `mvn test` |
-| Python (`back-python/`) | pytest | 30 | `python -m pytest` |
-| Auth (`auth-service/`) | Jest | — | `npm test` |
-| Bout-en-bout (`e2e/`) | Playwright | — | `npx playwright test` |
+| Back                    | Outil      | Tests | Commande              |
+| ----------------------- | ---------- | ----- | --------------------- |
+| Node (`back/`)          | Jest       | 53    | `npm test`            |
+| Java (`back-java/`)     | JUnit 5    | 30    | `mvn test`            |
+| Python (`back-python/`) | pytest     | 30    | `python -m pytest`    |
+| Auth (`auth-service/`)  | Jest       | —     | `npm test`            |
+| Bout-en-bout (`e2e/`)   | Playwright | —     | `npx playwright test` |
 
 ### La CI (`.github/workflows/ci.yml`)
 
@@ -219,11 +216,11 @@ comparer une question simple : **lequel exécute ses tests le plus vite ?**
 > `Time elapsed` de Surefire). On ne compte que les tests. On ne compte pas le
 > téléchargement, l'install ou le build Docker.
 
-| Langage | Outil | Tests | Temps des tests |
-|---|---|---|---|
-| 🟢 **Python** | pytest | 30 | **0,60 s** |
-| 🟡 **Node.js** | Jest | 53 | **0,95 s** |
-| 🔴 **Java** | JUnit + Surefire | 30 | **1,82 s** |
+| Langage       | Outil            | Tests | Temps des tests |
+| ------------- | ---------------- | ----- | --------------- |
+| 🟢 **Python**  | pytest           | 30    | **0,60 s**      |
+| 🟡 **Node.js** | Jest             | 53    | **0,95 s**      |
+| 🔴 **Java**    | JUnit + Surefire | 30    | **1,82 s**      |
 
 ```mermaid
 xychart-beta
@@ -240,10 +237,10 @@ xychart-beta
   double). Jest est un peu plus lourd à lancer.
 - 🔴 **Java : 1,82 s.** Le plus lent. Mais le détail des logs est intéressant :
 
-| Tests Java | Tests | Temps |
-|---|---|---|
-| `CalculatorTest` (juste le calcul) | 23 | **0,146 s** ⚡ |
-| `ServerTest` (lance un vrai serveur) | 7 | **1,675 s** 🐢 |
+| Tests Java                           | Tests | Temps         |
+| ------------------------------------ | ----- | ------------- |
+| `CalculatorTest` (juste le calcul)   | 23    | **0,146 s** ⚡ |
+| `ServerTest` (lance un vrai serveur) | 7     | **1,675 s** 🐢 |
 
 Donc en Java, le calcul tout seul est ultra-rapide (0,146 s). Ce qui prend du
 temps, c'est de démarrer la JVM et un vrai serveur dans les tests. Ce n'est pas le
