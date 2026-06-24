@@ -4,6 +4,7 @@ Une calculatrice web simple. Mais derrière, le calcul est codé **3 fois**, dan
 **3 langages** (Node.js, Java, Python), qu'on peut échanger comme on veut. Le tout
 tourne avec **Docker** et est testé tout seul par une **CI GitHub Actions**.
 
+## Développeur Full Stack : Frédéric Makha SAR 
 ---
 
 ## 1. C'est quoi, ce projet ?
