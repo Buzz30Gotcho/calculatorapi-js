@@ -219,59 +219,87 @@ web et les mêmes scénarios passent quel que soit le langage derrière.
 
 ---
 
-## 7. ⭐ Comparatif des 3 langages : la vitesse des tests
+## 7. ⭐ Comparatif des 3 langages : la vitesse des tests en CI
 
 C'est le point concret demandé. Le projet implémente **le même back de calcul,
 avec la même API, en n'utilisant que la bibliothèque standard de chaque langage**.
-On peut donc comparer équitablement un point précis : **combien de temps prend la
-suite de tests unitaires de chaque langage ?**
+On peut donc comparer équitablement : **combien de temps prend chaque langage
+dans la CI GitHub Actions ?**
 
-> ⚙️ Mesures faites en local sur la machine de dev (commande `time`). Les chiffres
-> absolus varient d'une machine à l'autre, mais l'**ordre de grandeur** entre
-> langages est ce qui compte.
+> ⚙️ Chiffres **réels**, relevés sur un run de la CI (`CI — Tests & Couverture`,
+> branche `main`, 24/06/2026). Ce sont les **durées des jobs GitHub Actions**,
+> mesurées via l'API GitHub. Un job = checkout + installation de
+> l'environnement + installation des dépendances + exécution des tests.
 
-| Langage | Outil de test | Nb de tests | Temps « moteur » de test | Temps total (lancement inclus) |
+### 7.1 — Les jobs de tests unitaires
+
+| Job CI | Langage | Outil | Nb de tests | Durée du job |
 |---|---|---|---|---|
-| 🟢 **Python** | pytest | 30 | ~0,54 s | **~0,66 s** |
-| 🟡 **Node.js** | Jest | 53 | ~0,29 s | **~1,0 s** |
-| 🔴 **Java** | JUnit + Maven | 30 | ~0,07 s | **~2,6 s** |
+| `Tests Java (JUnit)` | 🔴 Java | JUnit + Maven | 30 | **18 s** |
+| `Tests Node.js` | 🟡 Node.js | Jest | 53 | **19 s** |
+| `Tests Python (pytest)` | 🟢 Python | pytest | 30 | **19 s** |
 
 ```mermaid
 xychart-beta
-    title "Temps total pour lancer la suite de tests (plus bas = plus rapide)"
-    x-axis ["Python (pytest)", "Node.js (Jest)", "Java (Maven)"]
-    y-axis "Secondes" 0 --> 3
-    bar [0.66, 1.0, 2.6]
+    title "Duree du job de tests unitaires en CI (secondes)"
+    x-axis ["Java (JUnit)", "Node.js (Jest)", "Python (pytest)"]
+    y-axis "Secondes" 0 --> 25
+    bar [18, 19, 19]
 ```
 
-### Comment lire ces chiffres ?
+**Surprise : les trois sont quasi à égalité (~18–19 s).** C'est l'enseignement le
+plus intéressant. En local, Java semblait le plus lent (démarrage JVM + Maven).
+Mais en CI, le temps est **dominé par le « décor » commun** à tous les jobs —
+cloner le dépôt, installer Java/Node/Python, télécharger les dépendances — pas par
+le calcul des tests lui-même. L'exécution réelle des tests (quelques centaines de
+millisecondes) est **noyée** dans ce temps de préparation. Conclusion : sur de
+petits projets, **le choix du langage ne change presque rien** au temps de CI.
 
-- **Python est le plus rapide à démarrer.** L'interpréteur se lance quasi
-  instantanément et pytest a très peu de surcharge. Idéal pour la boucle
-  « je modifie → je teste » en développement.
-- **Node.js / Jest est entre les deux.** Le calcul pur est ultra-rapide (Jest
-  exécute 53 tests en ~0,29 s !), mais Jest démarre tout un framework
-  (transformation, workers parallèles), d'où ~1 s au total.
-- **Java est le plus lent à lancer… mais pour une bonne raison.** Le temps part
-  surtout dans le **démarrage de la JVM** et de **Maven** (compilation comprise).
-  Une fois lancée, l'exécution des tests est la plus rapide des trois (~0,07 s).
-  Sur un gros projet avec des milliers de tests, cet « impôt de démarrage » se
-  rentabilise ; sur un micro-projet comme celui-ci, il pèse lourd en proportion.
+### 7.2 — Là où le langage fait vraiment la différence : les jobs E2E
+
+La CI lance aussi les tests bout-en-bout (Playwright) **une fois par backend**.
+Chaque job doit **construire l'image Docker du back** puis démarrer toute la stack.
+Et là, l'écart entre langages devient net :
+
+| Job CI | Backend testé | Durée du job |
+|---|---|---|
+| `E2E Playwright (back = python)` | 🟢 Python | **61 s** |
+| `E2E Playwright (back = node)` | 🟡 Node.js | **142 s** |
+| `E2E Playwright (back = java)` | 🔴 Java | **163 s** |
+
+```mermaid
+xychart-beta
+    title "Duree du job E2E selon le backend (secondes)"
+    x-axis ["Python", "Node.js", "Java"]
+    y-axis "Secondes" 0 --> 180
+    bar [61, 142, 163]
+```
+
+**Ici Python écrase la concurrence (2,5× plus rapide que Java).** La raison n'est
+pas l'exécution des tests (ce sont les mêmes scénarios Playwright), mais la
+**construction de l'image Docker du backend** :
+
+- 🟢 **Python** : pas de compilation, image légère → build le plus rapide.
+- 🟡 **Node.js** : `npm install` à faire dans l'image → un peu plus lourd.
+- 🔴 **Java** : il faut **compiler le code avec Maven** et télécharger ses
+  dépendances dans l'image → c'est le plus long à préparer.
 
 ### La leçon à retenir
 
-| Critère | Gagnant | Pourquoi |
-|---|---|---|
-| Démarrage le plus rapide | 🟢 Python | Interpréteur instantané, outillage léger |
-| Exécution pure la plus rapide | 🔴 Java | Code compilé + JVM optimisée |
-| Meilleur compromis pour ce projet | 🟢 Python | Petit projet → le démarrage rapide domine |
+| Question | Réponse mesurée en CI |
+|---|---|
+| Le langage change-t-il le temps des **tests unitaires** ? | Quasiment pas (~18–19 s pour tous) : le setup du runner domine. |
+| Le langage change-t-il le temps du **build + E2E** ? | Beaucoup : Python 61 s, Node 142 s, Java 163 s. |
+| Pourquoi Java est-il le plus lent en E2E ? | Compilation Maven + dépendances à construire dans l'image Docker. |
+| Pourquoi Python est-il le plus rapide en E2E ? | Langage interprété : aucune étape de compilation, image plus légère. |
 
-👉 **Conclusion :** il n'y a pas de « meilleur langage » dans l'absolu. Pour un
-**petit projet** où on relance souvent les tests, le **démarrage rapide de Python
-(ou Node)** est plus agréable. Pour un **gros projet** où l'exécution domine, la
-**vitesse brute de Java** finit par payer. Ce projet, en codant la *même* chose
-trois fois, permet de **toucher du doigt** ce compromis au lieu de le lire dans
-un cours.
+👉 **Conclusion :** il n'y a pas de « meilleur langage » dans l'absolu. Sur ce
+projet, le langage **ne pèse pas sur le temps des tests unitaires** (le décor de
+la CI domine), mais il pèse **fortement sur le temps de build Docker** : le
+**Python interprété démarre vite** quand le **Java compilé paie un coût de
+construction** (qui, en contrepartie, donne du code plus rapide à l'exécution).
+Coder la *même* chose trois fois permet de **mesurer** ce compromis au lieu de le
+lire dans un cours.
 
 ---
 
