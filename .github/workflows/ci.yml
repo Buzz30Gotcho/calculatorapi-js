@@ -27,28 +27,23 @@ jobs:
       - run: npm run lint
 
   test:
-    name: Tests Node.js ${{ matrix.node-version }}
+    name: Tests Node.js
     runs-on: ubuntu-latest
     needs: lint # Attend que le lint réussisse
     defaults:
       run:
         working-directory: back # package.json vit dans back/
-    strategy:
-      fail-fast: false # Teste les deux versions même si l'une échoue
-      matrix:
-        node-version: ["22.x", "24.x"]
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          
+          node-version: "22.x"
+
       - run: npm install
       - run: npm run test:ci
-      
+
       - name: Upload du rapport de couverture
-        if: matrix.node-version == '22.x'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -117,18 +112,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # 1. Construire les deux images (API + UX)
-      - name: Build de l'image API
-        run: docker build -t calculatorapi ./back
-
-      - name: Build de l'image UX
-        run: docker build -t calculatorapi-ux ./front
-
-      # 2. Démarrer la stack complète
+      # 1. Démarrer la stack complète (compose construit les images au passage)
       - name: Démarrer les conteneurs
-        run: docker compose up -d
+        run: docker compose up -d --build
 
-      # 3. Smoke test : le calcul passe par le gateway, et l'UX répond
+      # 2. Smoke test : le calcul passe par le gateway, et l'UX répond
       - name: Smoke test calcul (via gateway)
         run: |
           for i in $(seq 1 20); do
@@ -147,12 +135,37 @@ jobs:
           echo "Status attendu 200, reçu : $status"
           test "$status" = "200"
 
-      # 4. Tests E2E Playwright contre la stack démarrée
+      # 3. Nettoyage
+      - name: Logs des conteneurs (si échec)
+        if: failure()
+        run: docker compose logs
+
+      - name: Arrêter les conteneurs
+        if: always()
+        run: docker compose down
+
+  e2e:
+    name: E2E Playwright (back = ${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    needs: [test, test-java, test-python, test-auth]
+    strategy:
+      fail-fast: false # On teste les 3 backends même si l'un échoue
+      matrix:
+        backend: [node, java, python]
+    # Un seul override : la stack tourne avec CE backend, gateway pointe dessus.
+    env:
+      COMPOSE_FILE: docker-compose.yml:compose.${{ matrix.backend }}.yml
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Démarrer la stack (back = ${{ matrix.backend }})
+        run: docker compose up -d --build
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22.x"
 
-      - name: Installer les dépendances et le navigateur
+      - name: Installer Playwright + Chromium
         working-directory: e2e
         run: |
           npm install
@@ -168,12 +181,11 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-traces
+          name: playwright-traces-${{ matrix.backend }}
           path: e2e/test-results/
           if-no-files-found: ignore
           retention-days: 30
 
-      # 5. Nettoyage
       - name: Logs des conteneurs (si échec)
         if: failure()
         run: docker compose logs
