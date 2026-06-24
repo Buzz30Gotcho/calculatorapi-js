@@ -1,6 +1,3 @@
-# ============================================================
-#  node-api : service de calcul pur (Node.js, sans dépendance native)
-# ============================================================
 
 # --- Étape 1 : deps (toutes les dépendances, dont dev pour les tests) ---
 FROM node:20-slim AS deps
